@@ -12,7 +12,7 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { UserInfo } from '@/components/user-info';
-import { UserMenuContent } from '@/components/user-menu-content';
+
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function NavUser() {
@@ -48,9 +48,7 @@ export function NavUser() {
                                   ? 'left'
                                   : 'bottom'
                         }
-                    >
-                        <UserMenuContent user={auth.user} />
-                    </DropdownMenuContent>
+                    ></DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>
         </SidebarMenu>
