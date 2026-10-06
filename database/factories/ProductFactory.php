@@ -2,16 +2,22 @@
 
 namespace Database\Factories;
 
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<Product>
+ */
 class ProductFactory extends Factory
 {
+    /** @var array<int, string> */
     private array $brands = [
         'Nike', 'Adidas', 'Puma', 'Reebok', 'New Balance',
         'Converse', 'Vans', 'Asics', 'Saucony', 'Brooks',
     ];
 
+    /** @var array<int, string> */
     private array $models = [
         'Air Max', 'Ultra Boost', 'RS-X', 'Classic Leather', 'Fresh Foam',
         'Chuck Taylor', 'Old Skool', 'Gel-Nimbus', 'Ride', 'Ghost',
@@ -19,21 +25,28 @@ class ProductFactory extends Factory
         'React', 'ZX 2K', 'Velocity', 'Floatride', 'Adrenaline',
     ];
 
+    /** @var array<int, string> */
     private array $colorOptions = [
         'Black', 'White', 'Red', 'Navy', 'Grey',
         'Blue', 'Green', 'Orange', 'Pink', 'Beige',
         'Brown', 'Yellow', 'Purple', 'Teal',
     ];
 
+    /** @var array<int, string> */
     private array $styleCategories = [
         'Running', 'Casual', 'Basketball', 'Training',
         'Lifestyle', 'Walking', 'Trail', 'Tennis',
     ];
 
+    /** @var array<int, string> */
     private array $sizes = ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '12'];
 
+    /** @var array<int, string> */
     private array $genders = ['Men', 'Women', 'Unisex'];
 
+    /**
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
         $brand = $this->faker->randomElement($this->brands);

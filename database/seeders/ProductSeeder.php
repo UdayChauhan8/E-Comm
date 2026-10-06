@@ -8,14 +8,9 @@ use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
-    private array $colorOptions = [
-        'Black', 'White', 'Red', 'Navy', 'Grey',
-        'Blue', 'Green', 'Orange', 'Pink', 'Beige',
-    ];
-
     public function run(): void
     {
-        Product::factory(50)->create()->each(function (Product $product) {
+        Product::factory(50)->create()->each(function (Product $product, int $index) {
 
             foreach ($product->colors as $color) {
                 $imageCount = rand(2, 3);

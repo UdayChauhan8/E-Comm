@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Passport\Token;
 
 class AuthController extends Controller
 {
@@ -77,7 +78,7 @@ class AuthController extends Controller
         }
 
         // Generate a random 6-digit OTP
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         // Save OTP and expiry (10 minutes)
         $user->update([
@@ -151,7 +152,9 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->token()->revoke();
+        /** @var Token $token */
+        $token = $request->user()->token();
+        $token->revoke();
 
         return response()->json([
             'message' => 'Logged out successfully',

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use Database\Factories\ProductImageFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductImage extends Model
 {
+    /** @use HasFactory<ProductImageFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -19,6 +21,8 @@ class ProductImage extends Model
 
     /**
      * A product image belongs to one product.
+     *
+     * @return BelongsTo<Product, $this>
      */
     public function product(): BelongsTo
     {

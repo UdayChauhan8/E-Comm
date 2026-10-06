@@ -25,6 +25,7 @@ class OrderController extends Controller
             'amount' => ['required', 'numeric', 'min:0.01'],
         ]);
 
+        /** @var Order $order */
         $order = $request->user()->orders()->create($validated);
 
         OrderActionEvent::dispatch($order, $request->user(), 'created');
