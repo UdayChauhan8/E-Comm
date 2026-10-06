@@ -22,7 +22,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             'product_name' => ['required', 'string', 'max:255'],
             'order_number' => ['required', 'string', 'max:255', 'unique:orders'],
-            'amount'       => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
         ]);
 
         $order = $request->user()->orders()->create($validated);
@@ -31,7 +31,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Order created successfully',
-            'order'   => $order,
+            'order' => $order,
         ], 201);
     }
 
@@ -52,8 +52,8 @@ class OrderController extends Controller
 
         $validated = $request->validate([
             'product_name' => ['sometimes', 'string', 'max:255'],
-            'order_number' => ['sometimes', 'string', 'max:255', 'unique:orders,order_number,' . $order->id],
-            'amount'       => ['sometimes', 'numeric', 'min:0.01'],
+            'order_number' => ['sometimes', 'string', 'max:255', 'unique:orders,order_number,'.$order->id],
+            'amount' => ['sometimes', 'numeric', 'min:0.01'],
         ]);
 
         $order->update($validated);
@@ -62,7 +62,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Order updated successfully',
-            'order'   => $order,
+            'order' => $order,
         ]);
     }
 

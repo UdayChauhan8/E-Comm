@@ -22,6 +22,6 @@ class SendOrderActionEmail implements ShouldQueue
      */
     public function handle(OrderActionEvent $event): void
     {
-        Mail::to($event->user->email)->send( new OrderActionMail($event->order,$event->action));
+        Mail::to($event->user->email)->send(new OrderActionMail($event->order, $event->action));
     }
 }

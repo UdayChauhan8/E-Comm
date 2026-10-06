@@ -22,9 +22,9 @@ class OrderActionMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         $subjects = [
-            'created' => 'New Order Created - ' . $this->order->order_number,
-            'updated' => 'Order Updated - ' . $this->order->order_number,
-            'deleted' => 'Order Deleted - ' . $this->order->order_number,
+            'created' => 'New Order Created - '.$this->order->order_number,
+            'updated' => 'Order Updated - '.$this->order->order_number,
+            'deleted' => 'Order Deleted - '.$this->order->order_number,
         ];
 
         return new Envelope(

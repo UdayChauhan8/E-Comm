@@ -14,11 +14,11 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('description');
             $table->decimal('price', 8, 2);
-            $table->json('colors');           
-            $table->json('sizes');            
-            $table->string('gender');         
-            $table->string('style_category'); 
-            $table->string('thumbnail');      
+            $table->json('colors');
+            $table->json('sizes');
+            $table->string('gender');
+            $table->string('style_category');
+            $table->string('thumbnail');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
@@ -26,9 +26,9 @@ return new class extends Migration
         Schema::create('product_images', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->string('color');   
-            $table->string('url');     
-            $table->integer('sort_order')->default(0); 
+            $table->string('color');
+            $table->string('url');
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
         });
     }

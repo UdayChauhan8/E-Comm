@@ -36,10 +36,10 @@ class ProductFactory extends Factory
 
     public function definition(): array
     {
-        $brand    = $this->faker->randomElement($this->brands);
-        $model    = $this->faker->randomElement($this->models);
+        $brand = $this->faker->randomElement($this->brands);
+        $model = $this->faker->randomElement($this->models);
         $colorway = $this->faker->randomElement($this->colorOptions);
-        $title    = "{$brand} {$model} {$colorway}";
+        $title = "{$brand} {$model} {$colorway}";
 
         $selectedColors = $this->faker->randomElements(
             $this->colorOptions,
@@ -50,19 +50,19 @@ class ProductFactory extends Factory
             $this->sizes,
             $this->faker->numberBetween(5, 8)
         );
-        sort($selectedSizes); 
+        sort($selectedSizes);
 
         return [
-            'title'          => $title,
-            'slug'           => Str::slug($title) . '-' . $this->faker->unique()->numberBetween(100, 999),
-            'description'    => $this->faker->paragraphs(2, true),
-            'price'          => $this->faker->randomFloat(2, 49.99, 249.99),
-            'colors'         => $selectedColors,
-            'sizes'          => $selectedSizes,
-            'gender'         => $this->faker->randomElement($this->genders),
+            'title' => $title,
+            'slug' => Str::slug($title).'-'.$this->faker->unique()->numberBetween(100, 999),
+            'description' => $this->faker->paragraphs(2, true),
+            'price' => $this->faker->randomFloat(2, 49.99, 249.99),
+            'colors' => $selectedColors,
+            'sizes' => $selectedSizes,
+            'gender' => $this->faker->randomElement($this->genders),
             'style_category' => $this->faker->randomElement($this->styleCategories),
-            'thumbnail'      => 'https://picsum.photos/seed/' . $this->faker->unique()->word() . '/400/400',
-            'is_active'      => true,
+            'thumbnail' => 'https://picsum.photos/seed/'.$this->faker->unique()->word().'/400/400',
+            'is_active' => true,
         ];
     }
 }

@@ -24,13 +24,12 @@ class Product extends Model
     ];
 
     protected $casts = [
-        'colors'    => 'array',  
-        'sizes'     => 'array',  
+        'colors' => 'array',
+        'sizes' => 'array',
         'is_active' => 'boolean',
-        'price'     => 'float',
+        'price' => 'float',
     ];
 
-    
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class);

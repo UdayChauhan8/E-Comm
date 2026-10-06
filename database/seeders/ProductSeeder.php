@@ -23,8 +23,8 @@ class ProductSeeder extends Seeder
                 for ($i = 0; $i < $imageCount; $i++) {
                     ProductImage::create([
                         'product_id' => $product->id,
-                        'color'      => $color,
-                        'url'        => 'https://picsum.photos/seed/' . $product->id . $color . $i . '/800/800',
+                        'color' => $color,
+                        'url' => 'https://picsum.photos/seed/'.$product->id.$color.$i.'/800/800',
                         'sort_order' => $i,
                     ]);
                 }
