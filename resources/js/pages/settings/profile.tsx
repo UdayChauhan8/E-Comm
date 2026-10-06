@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/profile';
 import type { Auth } from '@/types';
 
-
 type PageProps = {
     auth: Auth;
 };
@@ -84,8 +83,6 @@ export default function Profile({
                                     message={errors.email}
                                 />
                             </div>
-
-
 
                             <div className="flex items-center gap-4">
                                 <Button
