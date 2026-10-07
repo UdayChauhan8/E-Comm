@@ -52,4 +52,34 @@ class ProductController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get single product details by slug, including all fields and images.
+     */
+    public function show(string $slug): JsonResponse
+    {
+        // Fetch product with images, but only if it's active
+        /** @var Product|null $product */
+        $product = Product::active()
+            ->with(['images' => function ($query) {
+                // Optionally sort images by color and sort_order
+                $query->orderBy('color')->orderBy('sort_order');
+            }])
+            ->where('slug', $slug)
+            ->first();
+
+        if (! $product) {
+            return response()->json([
+                'message' => 'Product not found',
+            ], 404);
+        }
+
+        // Group the images by color for easier frontend consumption
+        $imagesByColor = $product->images->groupBy('color');
+
+        return response()->json([
+            'product' => $product,
+            'images_by_color' => $imagesByColor,
+        ]);
+    }
 }
