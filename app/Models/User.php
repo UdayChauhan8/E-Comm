@@ -61,4 +61,8 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $this->hasMany(Order::class);
     }
+        public function cart(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Cart::class);
+    }
 }
