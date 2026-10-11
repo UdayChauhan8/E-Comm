@@ -29,12 +29,11 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $token = $user->createToken('auth-token')->accessToken;
+        // Send OTP directly upon registration
+        $this->generateAndSendOtp($user);
 
         return response()->json([
-            'message' => 'Registration successful. Please verify your email with OTP.',
-            'user' => $user,
-            'token' => $token,
+            'message' => 'Registration successful. An OTP has been sent to your email to complete verification.',
         ], 201);
     }
 
@@ -53,41 +52,44 @@ class AuthController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+
+        if (! $user->is_verified) {
+            $this->generateAndSendOtp($user);
+
+            return response()->json([
+                'message' => 'Account not verified. A new OTP has been sent to your email.',
+                'is_verified' => false,
+            ], 403);
+        }
+
         $token = $user->createToken('auth-token')->accessToken;
 
         return response()->json([
             'message' => 'Login successful',
             'user' => $user,
-            'is_verified' => $user->is_verified,
+            'is_verified' => true,
             'token' => $token,
         ]);
     }
 
     /**
-     * Send OTP to user's email.
+     * Send OTP to a user's email.
      */
     public function sendOtp(Request $request): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'exists:users,email'],
+        ]);
+
+        $user = User::where('email', $request->email)->firstOrFail();
 
         if ($user->is_verified) {
             return response()->json([
-                'message' => 'Email already verified',
-            ]);
+                'message' => 'Email already verified. Please login.',
+            ], 400);
         }
 
-        // Generate a random 6-digit OTP
-        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        // Save OTP and expiry (10 minutes)
-        $user->update([
-            'otp' => Hash::make($otp),  // Store hashed (secure)
-            'otp_expires_at' => now()->addMinutes(10),
-        ]);
-
-        // Send OTP email (queued)
-        Mail::to($user->email)->send(new OtpMail($otp, $user->name));
+        $this->generateAndSendOtp($user);
 
         return response()->json([
             'message' => 'OTP sent to '.$user->email,
@@ -95,31 +97,29 @@ class AuthController extends Controller
     }
 
     /**
-     * Verify OTP and mark user as verified.
+     * Verify OTP and issue token.
      */
     public function verifyOtp(Request $request): JsonResponse
     {
         $request->validate([
+            'email' => ['required', 'string', 'email', 'exists:users,email'],
             'otp' => ['required', 'string', 'size:6'],
         ]);
 
-        /** @var User $user */
-        $user = $request->user();
+        $user = User::where('email', $request->email)->firstOrFail();
 
         if ($user->is_verified) {
             return response()->json([
-                'message' => 'Email already verified',
-            ]);
+                'message' => 'Email already verified. Please login.',
+            ], 400);
         }
 
-        // Check if OTP exists
         if (! $user->otp) {
             return response()->json([
                 'message' => 'No OTP found. Please request a new one.',
             ], 400);
         }
 
-        // Check if OTP has expired
         if (now()->greaterThan($user->otp_expires_at)) {
             $user->update(['otp' => null, 'otp_expires_at' => null]);
 
@@ -128,7 +128,6 @@ class AuthController extends Controller
             ], 400);
         }
 
-        // Check if OTP matches
         if (! Hash::check($request->otp, $user->otp)) {
             return response()->json([
                 'message' => 'Invalid OTP',
@@ -142,9 +141,29 @@ class AuthController extends Controller
             'otp_expires_at' => null,
         ]);
 
+        // Issue token upon successful verification
+        $token = $user->createToken('auth-token')->accessToken;
+
         return response()->json([
-            'message' => 'Email verified successfully! You can now make purchases.',
+            'message' => 'Email verified successfully! You are now logged in.',
+            'user' => $user,
+            'token' => $token,
         ]);
+    }
+
+    /**
+     * Helper method to generate and send OTP.
+     */
+    private function generateAndSendOtp(User $user): void
+    {
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $user->update([
+            'otp' => Hash::make($otp),
+            'otp_expires_at' => now()->addMinutes(10),
+        ]);
+
+        Mail::to($user->email)->send(new OtpMail($otp, $user->name));
     }
 
     /**

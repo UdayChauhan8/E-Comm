@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-      public function up(): void
+    public function up(): void
     {
         Schema::create('cart_items', function (Blueprint $table) {
             $table->id();
@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('size');
             $table->integer('quantity')->default(1);
             $table->timestamps();
-            
+
             $table->unique(['cart_id', 'product_id', 'color', 'size']);
         });
     }

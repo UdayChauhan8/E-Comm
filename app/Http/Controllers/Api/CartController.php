@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,12 +17,12 @@ class CartController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
-        
+
         // Get or create the user's cart
         $cart = $user->cart()->firstOrCreate([]);
-        
+
         // Load items with their associated products
         $cart->load('items.product');
 
@@ -51,7 +52,7 @@ class CartController extends Controller
         // Ensure product is active
         $product = Product::active()->findOrFail($validated['product_id']);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
         $cart = $user->cart()->firstOrCreate([]);
 

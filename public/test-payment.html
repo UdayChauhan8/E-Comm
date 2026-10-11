@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>E-Commerce Test Checkout</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #3399cc; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        button:hover { background-color: #287a9e; }
+        .box { background: #f4f4f4; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h2>🛒 Complete E-Commerce Checkout Test</h2>
+
+    <label for="token"><b>1. Paste your Bearer Token (from Postman Login/Verify OTP):</b></label>
+    <input type="text" id="token" placeholder="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1Ni..." />
+
+    <button id="pay-btn">Initiate Checkout & Pay</button>
+
+    <div id="result"></div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        document.getElementById('pay-btn').onclick = async function () {
+            const rawToken = document.getElementById('token').value.trim();
+            const token = rawToken.startsWith('Bearer ') ? rawToken : 'Bearer ' + rawToken;
+            const resultDiv = document.getElementById('result');
+
+            if (!rawToken) {
+                alert('Please paste your Bearer token first!');
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Initiating checkout via API...</p>';
+
+            try {
+                // STEP 1: Call Checkout API
+                const checkoutRes = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Authorization': token
+                    }
+                });
+
+                const checkoutData = await checkoutRes.json();
+
+                if (!checkoutRes.ok) {
+                    resultDiv.innerHTML = `<p style="color:red">Error: ${checkoutData.message || 'Checkout failed'}</p>`;
+                    return;
+                }
+
+                resultDiv.innerHTML = `<p>Checkout created! Opening Razorpay for Order: <b>${checkoutData.razorpay_order_id}</b></p>`;
+
+                // STEP 2: Open Razorpay Checkout Popup
+                const options = {
+                    "key": "rzp_test_TmJc7udlEDkVO4", // You can leave this or paste your RAZORPAY_KEY_ID from .env
+                    "amount": checkoutData.amount * 100,
+                    "currency": "INR",
+                    "name": "E-Comm Store",
+                    "description": "Order #" + checkoutData.order_id,
+                    "order_id": checkoutData.razorpay_order_id,
+                    "handler": async function (response) {
+                        // STEP 3: Payment succeeded! Send credentials to verify API
+                        resultDiv.innerHTML = '<p>Payment authorized by Razorpay! Verifying signature with backend...</p>';
+
+                        const verifyRes = await fetch('/api/payment/verify', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'Authorization': token
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyRes.ok) {
+                            resultDiv.innerHTML = `
+                                <div class="success">
+                                    <h3>🎉 Payment Verified Successfully!</h3>
+                                    <p>${verifyData.message}</p>
+                                    <p><b>Razorpay Payment ID:</b> ${response.razorpay_payment_id}</p>
+                                    <p><b>Check your Gmail inbox now for the confirmation email!</b></p>
+                                </div>
+                            `;
+                        } else {
+                            resultDiv.innerHTML = `<p style="color:red">Verification Failed: ${verifyData.message}</p>`;
+                        }
+                    },
+                    "theme": { "color": "#3399cc" }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+
+            } catch (err) {
+                resultDiv.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+            }
+        };
+    </script>
+</body>
+</html>
