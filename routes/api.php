@@ -31,6 +31,6 @@ Route::middleware('auth:api')->group(function () {
     Route::put('/cart/items/{item}', [CartController::class, 'update']);
     Route::delete('/cart/items/{item}', [CartController::class, 'destroy']);
 
-        Route::post('/checkout', [OrderController::class, 'checkout']);
+    Route::post('/checkout', [OrderController::class, 'checkout']);
     Route::post('/payment/verify', [OrderController::class, 'verifyPayment']);
 });

@@ -21,6 +21,7 @@ class CartController extends Controller
         $user = $request->user();
 
         // Get or create the user's cart
+        /** @var Cart $cart */
         $cart = $user->cart()->firstOrCreate([]);
 
         // Load items with their associated products
@@ -54,6 +55,7 @@ class CartController extends Controller
 
         /** @var User $user */
         $user = $request->user();
+        /** @var Cart $cart */
         $cart = $user->cart()->firstOrCreate([]);
 
         // Check if this exact item (same product, color, size) is already in the cart
@@ -81,8 +83,11 @@ class CartController extends Controller
      */
     public function update(Request $request, CartItem $item): JsonResponse
     {
+        /** @var Cart $cart */
+        $cart = $item->cart;
+
         // Ensure the item belongs to the authenticated user's cart
-        if ($item->cart->user_id !== $request->user()->id) {
+        if ($cart->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -102,7 +107,10 @@ class CartController extends Controller
      */
     public function destroy(Request $request, CartItem $item): JsonResponse
     {
-        if ($item->cart->user_id !== $request->user()->id) {
+        /** @var Cart $cart */
+        $cart = $item->cart;
+
+        if ($cart->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

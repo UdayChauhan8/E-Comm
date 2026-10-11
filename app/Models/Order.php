@@ -17,6 +17,7 @@ class Order extends Model
         'product_name',
         'order_number',
         'amount',
+        'status',
     ];
 
     /**

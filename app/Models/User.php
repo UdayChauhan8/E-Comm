@@ -63,6 +63,9 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->hasMany(Order::class);
     }
 
+    /**
+     * @return HasOne<Cart, $this>
+     */
     public function cart(): HasOne
     {
         return $this->hasOne(Cart::class);

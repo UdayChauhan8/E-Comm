@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\OrderActionEvent;
 use App\Http\Controllers\Controller;
+use App\Models\Cart;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Razorpay\Api\Api;
+use Razorpay\Api\Errors\SignatureVerificationError;
+use Razorpay\Api\Utility;
 
 class OrderController extends Controller
 {
@@ -80,10 +84,12 @@ class OrderController extends Controller
 
         return response()->json(['message' => 'Order deleted successfully']);
     }
-     public function checkout(Request $request): \Illuminate\Http\JsonResponse
+
+    public function checkout(Request $request): JsonResponse
     {
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
+        /** @var Cart|null $cart */
         $cart = $user->cart()->with('items.product')->first();
         if (! $cart || $cart->items->isEmpty()) {
             return response()->json(['message' => 'Your cart is empty'], 400);
@@ -95,33 +101,41 @@ class OrderController extends Controller
         // Razorpay expects the amount in PAISE (smallest currency unit). So multiply by 100.
         $amountInPaise = (int) round($totalAmount * 100);
         // 2. Initialize Razorpay API
-        $api = new Api(env('RAZORPAY_KEY_ID'), env('RAZORPAY_KEY_SECRET'));
+        $key = (string) config('services.razorpay.key');
+        $secret = (string) config('services.razorpay.secret');
+        $api = new Api($key, $secret);
+
+        /** @var \Razorpay\Api\Order $orderResource */
+        $orderResource = $api->__get('order');
+
         // 3. Create an order on Razorpay servers
-        $razorpayOrder = $api->order->create([
-            'receipt'         => 'rcpt_' . $user->id . '_' . time(),
-            'amount'          => $amountInPaise,
-            'currency'        => 'INR',
-            'payment_capture' => 1 // Auto capture payment
+        $razorpayOrder = $orderResource->create([
+            'receipt' => 'rcpt_'.$user->id.'_'.time(),
+            'amount' => $amountInPaise,
+            'currency' => 'INR',
+            'payment_capture' => 1, // Auto capture payment
         ]);
         // 4. Save the order in our local database as "Pending"
         $localOrder = $user->orders()->create([
-            'product_name' => 'Cart Checkout', // Simplification for now
-            'order_number' => $razorpayOrder['id'], // We store Razorpay's Order ID here
-            'amount'       => $totalAmount,
-            // (If you have a 'status' column, you would set it to 'pending' here)
+            'product_name' => 'Cart Checkout',
+            'order_number' => $razorpayOrder['id'],
+            'amount' => $totalAmount,
+            'status' => 'pending',
         ]);
+
         return response()->json([
             'message' => 'Checkout initiated',
             'order_id' => $localOrder->id,
             'razorpay_order_id' => $razorpayOrder['id'],
             'amount' => $totalAmount,
-            'currency' => 'INR'
+            'currency' => 'INR',
         ]);
     }
-        /**
+
+    /**
      * Verify the cryptographic signature sent by Razorpay after successful payment
      */
-    public function verifyPayment(Request $request): \Illuminate\Http\JsonResponse
+    public function verifyPayment(Request $request): JsonResponse
     {
         $request->validate([
             'razorpay_order_id' => 'required|string',
@@ -129,39 +143,52 @@ class OrderController extends Controller
             'razorpay_signature' => 'required|string',
         ]);
 
-        $api = new Api(env('RAZORPAY_KEY_ID'), env('RAZORPAY_KEY_SECRET'));
+        $key = (string) config('services.razorpay.key');
+        $secret = (string) config('services.razorpay.secret');
+        $api = new Api($key, $secret);
 
         try {
-            // 1. Verify the signature cryptographically to prevent fraud
+            // 1. Find the local order first
+            $order = Order::where('order_number', $request->razorpay_order_id)->firstOrFail();
+
+            // 2. CHECK IF ALREADY PAID! If yes, STOP and DO NOT send email!
+            if ($order->status === 'paid') {
+                return response()->json([
+                    'message' => 'Payment for this order has already been completed.',
+                ], 400);
+            }
+
+            // 3. Verify the signature cryptographically to prevent fraud
             $attributes = [
-                'razorpay_order_id'   => $request->razorpay_order_id,
+                'razorpay_order_id' => $request->razorpay_order_id,
                 'razorpay_payment_id' => $request->razorpay_payment_id,
-                'razorpay_signature'  => $request->razorpay_signature
+                'razorpay_signature' => $request->razorpay_signature,
             ];
-            
-            $api->utility->verifyPaymentSignature($attributes);
-            
-            // 2. Find the local order
-            $order = \App\Models\Order::where('order_number', $request->razorpay_order_id)->firstOrFail();
-            
-            // (Optional: If you have a status column, update it to 'paid')
-            // $order->update(['status' => 'paid']);
 
-            // 3. Dispatch our previously made Order Email Event
-            \App\Events\OrderActionEvent::dispatch($order, $request->user(), 'paid');
+            /** @var Utility $utility */
+            $utility = $api->__get('utility');
+            $utility->verifyPaymentSignature($attributes);
 
-            // 4. Empty the user's cart since they purchased it
-            $request->user()->cart->items()->delete();
+            // 4. Update the order status to PAID
+            $order->update(['status' => 'paid']);
+
+            // 5. Dispatch the email event (only sent once!)
+            OrderActionEvent::dispatch($order, $request->user(), 'paid');
+
+            // 6. Empty the user's cart
+            /** @var Cart|null $cart */
+            $cart = $request->user()->cart;
+            $cart?->items()->delete();
 
             return response()->json([
                 'message' => 'Payment successful and verified. Cart cleared.',
             ]);
 
-        } catch (\Razorpay\Api\Errors\SignatureVerificationError $e) {
+        } catch (SignatureVerificationError $e) {
             // If the signature is invalid, it means the payment failed or was tampered with
             return response()->json([
                 'message' => 'Invalid payment signature.',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 400);
         }
     }
