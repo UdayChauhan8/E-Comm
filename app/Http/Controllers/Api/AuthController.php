@@ -66,9 +66,9 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,
-            'is_verified' => true,
-            'token' => $token,
+            'name'    => $user->name,
+            'id'      => $user->id,
+            'token'   => $token,
         ]);
     }
 
@@ -145,8 +145,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token')->accessToken;
 
         return response()->json([
-            'message' => 'Email verified successfully! You are now logged in.',
-            'user' => $user,
+            'id' => $user->id,
             'token' => $token,
         ]);
     }

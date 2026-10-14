@@ -38,9 +38,16 @@ class ProductController extends Controller
 
         // Only select fields needed for listing (NOT all columns)
         // This is faster — don't fetch description, colors, sizes etc. for list view
+                // 1. Read 'per_page' from frontend query params, defaulting to 12 if not provided
+        $perPage = (int) $request->input('per_page', 12);
+
+        // 2. Safety guard: Prevent negative numbers or abuse (max 100 items per request)
+        $perPage = min(max($perPage, 1), 100);
+
+        // 3. Pass the dynamic per_page into the paginator
         $products = $query
             ->select(['id', 'title', 'slug', 'price', 'thumbnail', 'style_category', 'gender'])
-            ->paginate(12);
+            ->paginate($perPage);
 
         return response()->json([
             'data' => $products->items(),
