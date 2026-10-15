@@ -25,14 +25,16 @@ class CartController extends Controller
         $cart = $user->cart()->firstOrCreate([]);
 
         // Load items with their associated products
-        $cart->load(['items' => function ($query) {
-    $query->where('status', 'active')->with('product');
-}]);
+        $cart->load([
+            'items' => function ($query) {
+                $query->where('status', 'active')->with('product');
+            }
+        ]);
 
         // Calculate total of active items only
-$total = $cart->items->sum(function ($item) {
-    return $item->quantity * $item->product->price;
-});
+        $total = $cart->items->sum(function ($item) {
+            return $item->quantity * $item->product->price;
+        });
 
         return response()->json([
             'cart' => $cart,
@@ -40,6 +42,9 @@ $total = $cart->items->sum(function ($item) {
         ]);
     }
 
+    /**
+     * Add a product to the cart.
+     */
     /**
      * Add a product to the cart.
      */
@@ -52,19 +57,50 @@ $total = $cart->items->sum(function ($item) {
             'quantity' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
-        // Ensure product is active
+        // 1. Ensure product is active
         $product = Product::active()->findOrFail($validated['product_id']);
+
+        // 2. Validate Color against available colors (case-insensitive check)
+        $availableColors = $product->colors ?? [];
+        $colorMatch = collect($availableColors)->first(function ($c) use ($validated) {
+            return strcasecmp($c, $validated['color']) === 0;
+        });
+
+        if (!$colorMatch) {
+            return response()->json([
+                'message' => 'The selected color is not available for this product.',
+                'available_colors' => $availableColors,
+            ], 422);
+        }
+
+        // 3. Validate Size against available sizes
+        $availableSizes = $product->sizes ?? [];
+        $sizeMatch = collect($availableSizes)->first(function ($s) use ($validated) {
+            return (string) $s === (string) $validated['size'];
+        });
+
+        if (!$sizeMatch) {
+            return response()->json([
+                'message' => 'The selected size is not available for this product.',
+                'available_sizes' => $availableSizes,
+            ], 422);
+        }
+
+        // Use the exact canonical casing from the database
+        $validated['color'] = $colorMatch;
+        $validated['size'] = (string) $sizeMatch;
 
         /** @var User $user */
         $user = $request->user();
         /** @var Cart $cart */
         $cart = $user->cart()->firstOrCreate([]);
 
-        // Check if this exact item (same product, color, size) is already in the cart
+        // 4. Check if this exact item (same product, color, size) is already in the cart
         $cartItem = $cart->items()->where([
             'product_id' => $validated['product_id'],
             'color' => $validated['color'],
             'size' => $validated['size'],
+            'status' => 'active',
         ])->first();
 
         if ($cartItem) {

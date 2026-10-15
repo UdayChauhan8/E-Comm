@@ -1,23 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>E-Commerce Test Checkout</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        input, button { width: 100%; padding: 10px; margin: 8px 0; font-size: 16px; box-sizing: border-box; }
-        button { background-color: #3399cc; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        button:hover { background-color: #287a9e; }
-        .box { background: #f4f4f4; padding: 15px; border-radius: 5px; margin-top: 20px; }
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3399cc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #287a9e;
+        }
+
+        .box {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
     </style>
 </head>
+
 <body>
 
     <h2>🛒 Complete E-Commerce Checkout Test</h2>
 
-    <label for="token"><b>1. Paste your Bearer Token (from Postman Login/Verify OTP):</b></label>
+    <label for="token"><b>1. Paste Bearer Token:</b></label>
     <input type="text" id="token" placeholder="Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1Ni..." />
+
+    <label for="cart_items"><b>2. Enter Cart Item ID(s) (e.g. 7):</b></label>
+    <input type="text" id="cart_items" placeholder="7" value="7" />
 
     <button id="pay-btn">Initiate Checkout & Pay</button>
 
@@ -28,6 +71,7 @@
         document.getElementById('pay-btn').onclick = async function () {
             const rawToken = document.getElementById('token').value.trim();
             const token = rawToken.startsWith('Bearer ') ? rawToken : 'Bearer ' + rawToken;
+            const cartItemsInput = document.getElementById('cart_items').value.trim();
             const resultDiv = document.getElementById('result');
 
             if (!rawToken) {
@@ -35,16 +79,28 @@
                 return;
             }
 
+            // Parse cart item IDs (e.g. "7" or "7, 8" into array [7])
+            const cartItemIds = cartItemsInput.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+            if (cartItemIds.length === 0) {
+                alert('Please enter at least one valid Cart Item ID!');
+                return;
+            }
+
             resultDiv.innerHTML = '<p>Initiating checkout via API...</p>';
 
             try {
-                // STEP 1: Call Checkout API
+                // STEP 1: Call Checkout API with cart_item_ids
                 const checkoutRes = await fetch('/api/checkout', {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
+                        'Content-Type': 'application/json',
                         'Authorization': token
-                    }
+                    },
+                    body: JSON.stringify({
+                        cart_item_ids: cartItemIds
+                    })
                 });
 
                 const checkoutData = await checkoutRes.json();
@@ -58,9 +114,9 @@
 
                 // STEP 2: Open Razorpay Checkout Popup
                 const options = {
-                    "key": "rzp_test_TmJc7udlEDkVO4", // You can leave this or paste your RAZORPAY_KEY_ID from .env
-                    "amount": checkoutData.amount * 100,
-                    "currency": "INR",
+                    "key": checkoutData.key,
+                    "amount": Math.round(checkoutData.amount * 100),
+                    "currency": checkoutData.currency,
                     "name": "E-Comm Store",
                     "description": "Order #" + checkoutData.order_id,
                     "order_id": checkoutData.razorpay_order_id,
@@ -89,6 +145,7 @@
                                 <div class="success">
                                     <h3>🎉 Payment Verified Successfully!</h3>
                                     <p>${verifyData.message}</p>
+                                    <p><b>Order Reference:</b> ${verifyData.order_reference}</p>
                                     <p><b>Razorpay Payment ID:</b> ${response.razorpay_payment_id}</p>
                                     <p><b>Check your Gmail inbox now for the confirmation email!</b></p>
                                 </div>
@@ -109,4 +166,5 @@
         };
     </script>
 </body>
+
 </html>

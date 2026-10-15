@@ -69,7 +69,7 @@ class OrderController extends Controller
     {
         // Validate that the frontend sent an array of cart item IDs
         $request->validate([
-            'cart_item_ids'   => ['required', 'array', 'min:1'],
+            'cart_item_ids' => ['required', 'array', 'min:1'],
             'cart_item_ids.*' => ['integer', 'exists:cart_items,id'],
         ]);
 
@@ -79,7 +79,7 @@ class OrderController extends Controller
         // Get the user's cart
         /** @var Cart|null $cart */
         $cart = $user->cart()->first();
-        if (! $cart) {
+        if (!$cart) {
             return response()->json(['message' => 'You have no cart'], 400);
         }
 
@@ -96,10 +96,10 @@ class OrderController extends Controller
         }
 
         // Calculate money amounts
-        $subtotal = $selectedItems->sum(fn ($item) => $item->quantity * $item->product->price);
-        $tax      = 0;      // add tax logic here later if needed
+        $subtotal = $selectedItems->sum(fn($item) => $item->quantity * $item->product->price);
+        $tax = 0;      // add tax logic here later if needed
         $discount = 0;      // add coupon logic here later if needed
-        $total    = $subtotal - $discount + $tax;
+        $total = $subtotal - $discount + $tax;
 
         // Guard: Razorpay requires minimum ₹1.00 (= 100 paise)
         $amountInPaise = (int) round($total * 100);
@@ -111,13 +111,13 @@ class OrderController extends Controller
         // We create the order BEFORE calling Razorpay.
         // If Razorpay fails, we can track that the user tried.
         $order = $user->orders()->create([
-            'reference'    => 'ORD-' . strtoupper(uniqid()),  // e.g. "ORD-1728878400ABCD"
-            'currency'     => 'INR',
-            'subtotal'     => $subtotal,
-            'discount'     => $discount,
-            'tax'          => $tax,
+            'reference' => 'ORD-' . strtoupper(uniqid()),  // e.g. "ORD-1728878400ABCD"
+            'currency' => 'INR',
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'tax' => $tax,
             'total_amount' => $total,
-            'status'       => 'pending',
+            'status' => 'pending',
         ]);
 
         // === CREATE ORDER ITEMS ===
@@ -125,12 +125,12 @@ class OrderController extends Controller
         foreach ($selectedItems as $item) {
             $order->items()->create([
                 'product_id' => $item->product_id,
-                'color'      => $item->color,
-                'size'       => $item->size,
-                'quantity'   => $item->quantity,
+                'color' => $item->color,
+                'size' => $item->size,
+                'quantity' => $item->quantity,
                 'unit_price' => $item->product->price,                   // snapshot!
-                'subtotal'   => $item->quantity * $item->product->price, // snapshot!
-                'status'     => 'pending',
+                'subtotal' => $item->quantity * $item->product->price, // snapshot!
+                'status' => 'pending',
             ]);
         }
 
@@ -139,18 +139,18 @@ class OrderController extends Controller
         // gateway_order_id is null for now — we'll fill it after calling Razorpay.
         $payment = $order->payments()->create([
             'payment_reference' => 'PAY-' . strtoupper(uniqid()),
-            'gateway'           => 'razorpay',
-            'currency'          => 'INR',
-            'amount'            => $total,
-            'status'            => 'pending',
-            'attempted_at'      => now(),
+            'gateway' => 'razorpay',
+            'currency' => 'INR',
+            'amount' => $total,
+            'status' => 'pending',
+            'attempted_at' => now(),
         ]);
 
         // === CALL RAZORPAY API ===
         // We wrap this in try/catch because the Razorpay server might be down
-        $key    = (string) config('services.razorpay.key');
+        $key = (string) config('services.razorpay.key');
         $secret = (string) config('services.razorpay.secret');
-        $api    = new Api($key, $secret);
+        $api = new Api($key, $secret);
 
         try {
             /** @var \Razorpay\Api\Order $orderResource */
@@ -158,16 +158,16 @@ class OrderController extends Controller
 
             $razorpayOrder = $orderResource->create([
                 // uniqid() is microsecond-based, so even 2 requests in same second get different values
-                'receipt'          => 'rcpt_' . $user->id . '_' . uniqid(),
-                'amount'           => $amountInPaise,
-                'currency'         => 'INR',
-                'payment_capture'  => 1,   // 1 = auto-capture money immediately after payment
+                'receipt' => 'rcpt_' . $user->id . '_' . uniqid(),
+                'amount' => $amountInPaise,
+                'currency' => 'INR',
+                'payment_capture' => 1,   // 1 = auto-capture money immediately after payment
                 // notes are stored on Razorpay's Dashboard — useful for support
                 'notes' => [
-                    'user_id'           => (string) $user->id,
-                    'user_email'        => $user->email,
-                    'our_order_ref'     => $order->reference,
-                    'our_payment_ref'   => $payment->payment_reference,
+                    'user_id' => (string) $user->id,
+                    'user_email' => $user->email,
+                    'our_order_ref' => $order->reference,
+                    'our_payment_ref' => $payment->payment_reference,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -189,12 +189,12 @@ class OrderController extends Controller
 
         // Return everything the frontend needs to open the Razorpay widget
         return response()->json([
-            'order_id'         => $order->id,
-            'payment_id'       => $payment->id,
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
             'razorpay_order_id' => $razorpayOrder['id'],
-            'amount'           => $total,
-            'currency'         => 'INR',
-            'key'              => $key, // public key — safe to send to browser
+            'amount' => $total,
+            'currency' => 'INR',
+            'key' => $key, // public key — safe to send to browser
         ]);
     }
 
@@ -212,21 +212,21 @@ class OrderController extends Controller
     public function verifyPayment(Request $request): JsonResponse
     {
         $request->validate([
-            'razorpay_order_id'   => 'required|string',
+            'razorpay_order_id' => 'required|string',
             'razorpay_payment_id' => 'required|string',
-            'razorpay_signature'  => 'required|string',
+            'razorpay_signature' => 'required|string',
         ]);
 
         // === FIND THE PAYMENT RECORD ===
         // We look up by gateway_order_id (Razorpay's ID) AND the order must belong to
         // the authenticated user. This prevents User B from verifying User A's payment.
         $payment = Payment::whereHas('order', function ($q) use ($request) {
-                $q->where('user_id', $request->user()->id);
-            })
+            $q->where('user_id', $request->user()->id);
+        })
             ->where('gateway_order_id', $request->razorpay_order_id)
             ->first();
 
-        if (! $payment) {
+        if (!$payment) {
             return response()->json(['message' => 'Payment not found'], 404);
         }
 
@@ -239,9 +239,9 @@ class OrderController extends Controller
             ], 400);
         }
 
-        $key    = (string) config('services.razorpay.key');
+        $key = (string) config('services.razorpay.key');
         $secret = (string) config('services.razorpay.secret');
-        $api    = new Api($key, $secret);
+        $api = new Api($key, $secret);
 
         try {
             // === CRYPTOGRAPHIC SIGNATURE VERIFICATION ===
@@ -257,16 +257,16 @@ class OrderController extends Controller
             /** @var \Razorpay\Api\Utility $utility */
             $utility = $api->__get('utility');
             $utility->verifyPaymentSignature([
-                'razorpay_order_id'   => $request->razorpay_order_id,
+                'razorpay_order_id' => $request->razorpay_order_id,
                 'razorpay_payment_id' => $request->razorpay_payment_id,
-                'razorpay_signature'  => $request->razorpay_signature,
+                'razorpay_signature' => $request->razorpay_signature,
             ]);
 
         } catch (SignatureVerificationError $e) {
             // Signature mismatch = fraud attempt or corrupted data
             // Mark the payment as failed so we have a record
             $payment->update([
-                'status'         => 'failed',
+                'status' => 'failed',
                 'failure_reason' => 'Signature verification failed: ' . $e->getMessage(),
             ]);
 
@@ -279,8 +279,8 @@ class OrderController extends Controller
         // 1. Update the payment row
         $payment->update([
             'gateway_payment_id' => $request->razorpay_payment_id,  // Razorpay's payment ID
-            'status'             => 'captured',
-            'captured_at'        => now(),
+            'status' => 'captured',
+            'captured_at' => now(),
         ]);
 
         // 2. Update the order status from 'pending' to 'processing'
@@ -300,13 +300,14 @@ class OrderController extends Controller
                 ->update(['status' => 'ordered']);
         }
 
-        // 4. Send confirmation email
+        // 4. Send confirmation email (load items and products for the email template)
+        $order->load('items.product');
         OrderActionEvent::dispatch($order, $request->user(), 'paid');
 
         return response()->json([
-            'message'        => 'Payment verified successfully.',
+            'message' => 'Payment verified successfully.',
             'order_reference' => $order->reference,
-            'amount_paid'    => $payment->amount,
+            'amount_paid' => $payment->amount,
         ]);
     }
 }
