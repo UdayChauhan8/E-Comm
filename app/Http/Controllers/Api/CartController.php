@@ -25,12 +25,14 @@ class CartController extends Controller
         $cart = $user->cart()->firstOrCreate([]);
 
         // Load items with their associated products
-        $cart->load('items.product');
+        $cart->load(['items' => function ($query) {
+    $query->where('status', 'active')->with('product');
+}]);
 
-        // Calculate total cart value
-        $total = $cart->items->sum(function ($item) {
-            return $item->quantity * $item->product->price;
-        });
+        // Calculate total of active items only
+$total = $cart->items->sum(function ($item) {
+    return $item->quantity * $item->product->price;
+});
 
         return response()->json([
             'cart' => $cart,

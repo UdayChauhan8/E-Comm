@@ -13,6 +13,7 @@ class CartItem extends Model
         'color',
         'size',
         'quantity',
+        'status'
     ];
 
     /**
